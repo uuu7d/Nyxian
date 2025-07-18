@@ -56,19 +56,18 @@ class ContentViewController: UITableViewController, UIDocumentPickerDelegate, UI
                                           message: "",
                                           preferredStyle: .alert)
             
-            alert.addTextField { (textField) -> Void in
+            alert.addTextField { textField in
                 textField.placeholder = "Name"
             }
             
-            alert.addTextField { (textField) -> Void in
+            alert.addTextField { textField in
                 textField.placeholder = "Bundle Identifier"
             }
             
-            let cancelAction: UIAlertAction = UIAlertAction(title: "Cancel", style: .cancel)
-            
-            let createAction: UIAlertAction = UIAlertAction(title: "Create", style: .default) { action -> Void in
-                let name = (alert.textFields![0]).text!
-                let bundleid = (alert.textFields![1]).text!
+            let cancelAction = UIAlertAction(title: "Cancel", style: .cancel)
+            let createAction = UIAlertAction(title: "Create", style: .default) { _ in
+                let name = alert.textFields?[0].text ?? ""
+                let bundleid = alert.textFields?[1].text ?? ""
                 
                 self.projects.append(AppProject.createAppProject(
                     atPath: self.path,
@@ -77,7 +76,6 @@ class ContentViewController: UITableViewController, UIDocumentPickerDelegate, UI
                 ))
                 
                 let newIndexPath = IndexPath(row: self.projects.count - 1, section: 0)
-                
                 self.tableView.insertRows(at: [newIndexPath], with: .automatic)
             }
             
@@ -86,20 +84,21 @@ class ContentViewController: UITableViewController, UIDocumentPickerDelegate, UI
             
             self.present(alert, animated: true)
         }
+        
         let importItem: UIAction = UIAction(title: "Import", image: UIImage(systemName: "square.and.arrow.down.fill")) { _ in
             let documentPicker = UIDocumentPickerViewController(forOpeningContentTypes: [.zip], asCopy: true)
             documentPicker.delegate = self
             documentPicker.modalPresentationStyle = .pageSheet
             self.present(documentPicker, animated: true)
         }
+
         let injectItem: UIAction = UIAction(title: "IPA Injector", image: UIImage(systemName: "terminal")) { _ in
             let terminalVC = TerminalViewController()
             self.navigationController?.pushViewController(terminalVC, animated: true)
         }
         
-        let menu: UIMenu = UIMenu(children: [createItem, importItem, injectItem])
-        
-        let barbutton: UIBarButtonItem = UIBarButtonItem()
+        let menu = UIMenu(children: [createItem, importItem, injectItem])
+        let barbutton = UIBarButtonItem()
         barbutton.menu = menu
         barbutton.image = UIImage(systemName: "plus")
         self.navigationItem.setRightBarButton(barbutton, animated: false)
@@ -108,17 +107,12 @@ class ContentViewController: UITableViewController, UIDocumentPickerDelegate, UI
         self.tableView.rowHeight = 70
         
         self.projects = AppProject.listProjects(ofPath: self.path)
-        
         self.tableView.reloadData()
         
         if lastProjectWasSelected {
             let selectedProject = AppProject(path: "\(self.path)/\(lastProjectSelected)")
-            
-            let fileVC = FileListViewController(project: selectedProject,
-                                                path: selectedProject.getPath())
-            
+            let fileVC = FileListViewController(project: selectedProject, path: selectedProject.getPath())
             self.navigationController?.pushViewController(fileVC, animated: false)
-            
             return
         }
     }
@@ -141,8 +135,7 @@ class ContentViewController: UITableViewController, UIDocumentPickerDelegate, UI
         tableView.deselectRow(at: indexPath, animated: true)
         
         let selectedProject = projects[indexPath.row]
-        let fileVC = FileListViewController(project: selectedProject,
-                                            path: selectedProject.getPath())
+        let fileVC = FileListViewController(project: selectedProject, path: selectedProject.getPath())
         self.navigationController?.pushViewController(fileVC, animated: true)
         
         self.cellSelected = indexPath.row
@@ -151,71 +144,65 @@ class ContentViewController: UITableViewController, UIDocumentPickerDelegate, UI
     }
     
     override func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
-        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { suggestedActions in
-            let export: UIAction = UIAction(title: "Export", image: UIImage(systemName: "square.and.arrow.up.fill")) { _ in
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
+            let export = UIAction(title: "Export", image: UIImage(systemName: "square.and.arrow.up.fill")) { _ in
                 DispatchQueue.global().async {
                     let project = self.projects[indexPath.row]
-                    
                     try? FileManager.default.zipItem(at: project.getPath().URLGet(), to: URL(fileURLWithPath: "\(NSTemporaryDirectory())/\(project.projectConfig.displayname).zip"))
-                    
                     share(url: URL(fileURLWithPath: "\(NSTemporaryDirectory())/\(project.projectConfig.displayname).zip"), remove: true)
                 }
             }
             
-            let item: UIAction = UIAction(title: "Remove", image: UIImage(systemName: "trash.fill"), attributes: .destructive) { _ in
+            let remove = UIAction(title: "Remove", image: UIImage(systemName: "trash.fill"), attributes: .destructive) { _ in
                 let project = self.projects[indexPath.row]
-                
-                self.presentConfirmationAlert(
-                    title: "Warning",
-                    message: "Are you sure you want to remove \"\(project.projectConfig.displayname)\"?",
-                    confirmTitle: "Remove",
-                    confirmStyle: .destructive)
-                {
+                self.presentConfirmationAlert(title: "Warning", message: "Are you sure you want to remove \"\(project.projectConfig.displayname)\"?", confirmTitle: "Remove", confirmStyle: .destructive) {
                     AppProject.removeProject(project: project)
                     self.projects = AppProject.listProjects(ofPath: self.path)
                     self.tableView.deleteRows(at: [indexPath], with: .automatic)
                 }
             }
             
-            let settings: UIAction = UIAction(title: "Settings", image: UIImage(systemName: "gear")) { _ in
-                let settingsViewController: UINavigationController = UINavigationController(rootViewController: ProjectSettingsViewController(style: .insetGrouped, project: self.projects[indexPath.row]))
-                settingsViewController.modalPresentationStyle = .pageSheet
-                settingsViewController.presentationController?.delegate = self
-                self.present(settingsViewController, animated: true)
+            let settings = UIAction(title: "Settings", image: UIImage(systemName: "gear")) { _ in
+                let settingsVC = UINavigationController(rootViewController: ProjectSettingsViewController(style: .insetGrouped, project: self.projects[indexPath.row]))
+                settingsVC.modalPresentationStyle = .pageSheet
+                settingsVC.presentationController?.delegate = self
+                self.present(settingsVC, animated: true)
             }
             
-            return UIMenu(children: [export, item, settings])
+            return UIMenu(children: [export, remove, settings])
         }
     }
-    
+
+    // ✅ تم التعديل هنا لإظهار التيرمنال بعد اختيار ملف .ipa
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
         do {
             guard let selectedURL = urls.first else { return }
-        
-            let extractFirst: URL = URL(fileURLWithPath: "\(NSTemporaryDirectory())Proj")
+            
+            let extractFirst = URL(fileURLWithPath: "\(NSTemporaryDirectory())Proj")
             try FileManager.default.createDirectory(at: extractFirst, withIntermediateDirectories: true)
             try FileManager.default.unzipItem(at: selectedURL, to: extractFirst)
-            let items: [String] = try FileManager.default.contentsOfDirectory(atPath: "\(NSTemporaryDirectory())Proj")
-            let projectPath: String = "\(Bootstrap.shared.bootstrapPath("/Projects"))/\(UUID().uuidString)"
+            let items = try FileManager.default.contentsOfDirectory(atPath: extractFirst.path)
+            let projectPath = "\(Bootstrap.shared.bootstrapPath("/Projects"))/\(UUID().uuidString)"
             try FileManager.default.moveItem(atPath: extractFirst.appendingPathComponent(items.first ?? "").path, toPath: projectPath)
             try FileManager.default.removeItem(at: extractFirst)
 
-            self.projects.append(AppProject.init(path: projectPath))
+            self.projects.append(AppProject(path: projectPath))
             let newIndexPath = IndexPath(row: self.projects.count - 1, section: 0)
             self.tableView.insertRows(at: [newIndexPath], with: .automatic)
-        
-        // ✅ هنا نفتح التيرمنال بعد نجاح الاستيراد
+
+            // افتح التيرمنال التفاعلي وعرض الخطوات
             let terminalVC = TerminalViewController()
             self.navigationController?.pushViewController(terminalVC, animated: true)
-        
+
             terminalVC.log("🎉 تم استيراد مشروع جديد بنجاح!")
             terminalVC.log("📦 اسم الملف: \(selectedURL.lastPathComponent)")
             terminalVC.log("🗂️ المسار المؤقت: \(extractFirst.path)")
             terminalVC.log("📁 نقل المشروع إلى: \(projectPath)")
             terminalVC.log("🔍 بدء تحليل ملفات المشروع...")
             terminalVC.log("💡 يمكنك الآن بدء عملية الحقن أو التعديل!")
-        
+
         } catch {
-        NotificationServer.NotifyUser(level: .error, notification: error.localizedDescription)
+            NotificationServer.NotifyUser(level: .error, notification: error.localizedDescription)
+        }
     }
 }
