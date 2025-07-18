@@ -92,13 +92,18 @@ class ContentViewController: UITableViewController, UIDocumentPickerDelegate, UI
             documentPicker.modalPresentationStyle = .pageSheet
             self.present(documentPicker, animated: true)
         }
-        let menu: UIMenu = UIMenu(children: [createItem, importItem])
+        let injectItem: UIAction = UIAction(title: "IPA Injector", image: UIImage(systemName: "terminal")) { _ in
+            let terminalVC = TerminalViewController()
+            self.navigationController?.pushViewController(terminalVC, animated: true)
+        }
+        
+        let menu: UIMenu = UIMenu(children: [createItem, importItem, injectItem])
         
         let barbutton: UIBarButtonItem = UIBarButtonItem()
         barbutton.menu = menu
         barbutton.image = UIImage(systemName: "plus")
         self.navigationItem.setRightBarButton(barbutton, animated: false)
-        
+    
         self.tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
         self.tableView.rowHeight = 70
         
