@@ -186,6 +186,47 @@ class ContentViewController: UITableViewController, UIDocumentPickerDelegate, UI
             try FileManager.default.moveItem(atPath: extractFirst.appendingPathComponent(items.first ?? "").path, toPath: projectPath)
             try FileManager.default.removeItem(at: extractFirst)
 
+                        // ⚡️ تفعيل التيرمنال وعرض ما يحدث للمستخدم خطوة بخطوة
+            let terminalVC = TerminalViewController()
+            self.navigationController?.pushViewController(terminalVC, animated: true)
+            
+            terminalVC.log("🧩 جارٍ تحليل بنية ملف IPA...")
+            
+            // 1. ابحث عن مجلد Payload
+            let payloadPath = "\(projectPath)/Payload"
+            let payloadContents = try FileManager.default.contentsOfDirectory(atPath: payloadPath)
+            
+            guard let appBundleName = payloadContents.first(where: { $0.hasSuffix(".app") }) else {
+                terminalVC.log("❌ لم يتم العثور على ملف .app داخل Payload.")
+                return
+            }
+            
+            let appPath = "\(payloadPath)/\(appBundleName)"
+            terminalVC.log("📦 تم العثور على تطبيق: \(appBundleName)")
+            
+            // 2. البحث عن الملف التنفيذي (عادةً يحمل نفس اسم التطبيق)
+            let appBinary = appBundleName.replacingOccurrences(of: ".app", with: "")
+            let executablePath = "\(appPath)/\(appBinary)"
+            
+            if FileManager.default.fileExists(atPath: executablePath) {
+                terminalVC.log("✅ تم تحديد المسار التنفيذي: \(executablePath)")
+            } else {
+                terminalVC.log("⚠️ تعذر العثور على الملف التنفيذي مباشرة.")
+            }
+            
+            // 3. البحث عن مكتبات تستخدم @rpath
+            terminalVC.log("🔍 البحث عن مكتبات داخل التطبيق...")
+            
+            let files = try FileManager.default.contentsOfDirectory(atPath: appPath)
+            let dylibs = files.filter { $0.hasSuffix(".dylib") }
+            
+            for dylib in dylibs {
+                terminalVC.log("🧬 مكتبة مكتشفة: \(dylib)")
+            }
+            
+            // 4. إعلام المستخدم أن المشروع جاهز للحقن
+            terminalVC.log("🚀 يمكنك الآن اختيار نقطة الحقن أو تحميل مكتبة خارجية.")
+                        
             self.projects.append(AppProject(path: projectPath))
             let newIndexPath = IndexPath(row: self.projects.count - 1, section: 0)
             self.tableView.insertRows(at: [newIndexPath], with: .automatic)
