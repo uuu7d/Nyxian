@@ -95,17 +95,7 @@ class ContentViewController: UITableViewController, UIDocumentPickerDelegate, UI
         let injectItem: UIAction = UIAction(title: "IPA Injector", image: UIImage(systemName: "terminal")) { _ in
             let terminalVC = TerminalViewController()
             self.navigationController?.pushViewController(terminalVC, animated: true)
-            
-                        // بعد استيراد المشروع، افتح التيرمنال وابدأ بعرض الخطوات للمستخدم
-            let terminalVC = TerminalViewController()
-            self.navigationController?.pushViewController(terminalVC, animated: true)
-            
-            terminalVC.log("🎉 تم استيراد مشروع جديد بنجاح!")
-            terminalVC.log("📦 اسم الملف: \(selectedURL.lastPathComponent)")
-            terminalVC.log("🗂️ المسار المؤقت: \(extractFirst.path)")
-            terminalVC.log("📁 نقل المشروع إلى: \(projectPath)")
-            terminalVC.log("🔍 بدء تحليل ملفات المشروع...")
-            terminalVC.log("💡 يمكنك الآن بدء عملية الحقن أو التعديل!")
+        }
         
         let menu: UIMenu = UIMenu(children: [createItem, importItem, injectItem])
         
@@ -201,7 +191,7 @@ class ContentViewController: UITableViewController, UIDocumentPickerDelegate, UI
     func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
         do {
             guard let selectedURL = urls.first else { return }
-            
+        
             let extractFirst: URL = URL(fileURLWithPath: "\(NSTemporaryDirectory())Proj")
             try FileManager.default.createDirectory(at: extractFirst, withIntermediateDirectories: true)
             try FileManager.default.unzipItem(at: selectedURL, to: extractFirst)
@@ -209,12 +199,23 @@ class ContentViewController: UITableViewController, UIDocumentPickerDelegate, UI
             let projectPath: String = "\(Bootstrap.shared.bootstrapPath("/Projects"))/\(UUID().uuidString)"
             try FileManager.default.moveItem(atPath: extractFirst.appendingPathComponent(items.first ?? "").path, toPath: projectPath)
             try FileManager.default.removeItem(at: extractFirst)
-            
+
             self.projects.append(AppProject.init(path: projectPath))
             let newIndexPath = IndexPath(row: self.projects.count - 1, section: 0)
             self.tableView.insertRows(at: [newIndexPath], with: .automatic)
+        
+        // ✅ هنا نفتح التيرمنال بعد نجاح الاستيراد
+            let terminalVC = TerminalViewController()
+            self.navigationController?.pushViewController(terminalVC, animated: true)
+        
+            terminalVC.log("🎉 تم استيراد مشروع جديد بنجاح!")
+            terminalVC.log("📦 اسم الملف: \(selectedURL.lastPathComponent)")
+            terminalVC.log("🗂️ المسار المؤقت: \(extractFirst.path)")
+            terminalVC.log("📁 نقل المشروع إلى: \(projectPath)")
+            terminalVC.log("🔍 بدء تحليل ملفات المشروع...")
+            terminalVC.log("💡 يمكنك الآن بدء عملية الحقن أو التعديل!")
+        
         } catch {
-            NotificationServer.NotifyUser(level: .error, notification: error.localizedDescription)
-        }
+        NotificationServer.NotifyUser(level: .error, notification: error.localizedDescription)
     }
 }
