@@ -1,68 +1,68 @@
 import UIKit
 
 class TerminalViewController: UIViewController {
-    private let textView = UITextView()
-    private let runButton = UIButton(type: .system)
+
+    private let textView: UITextView = {
+        let tv = UITextView()
+        tv.isEditable = false
+        tv.backgroundColor = .black
+        tv.textColor = .green
+        tv.font = UIFont.monospacedSystemFont(ofSize: 14, weight: .regular)
+        tv.translatesAutoresizingMaskIntoConstraints = false
+        tv.text = "[+] Waiting for events...\n"
+        return tv
+    }()
+
+    private let clearButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("🧹 Clear", for: .normal)
+        button.tintColor = .white
+        button.backgroundColor = .darkGray
+        button.layer.cornerRadius = 6
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        self.title = "IPA Injector"
         view.backgroundColor = .black
-
-        setupTextView()
-        setupButton()
+        setupUI()
+        clearButton.addTarget(self, action: #selector(clearLog), for: .touchUpInside)
     }
 
-    private func setupTextView() {
-        textView.font = UIFont.monospacedSystemFont(ofSize: 14, weight: .regular)
-        textView.textColor = .green
-        textView.backgroundColor = .black
-        textView.isEditable = false
-        textView.text = "🔥 Nyxian Terminal Ready...\n"
+    private func setupUI() {
         view.addSubview(textView)
-        textView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(clearButton)
+
         NSLayoutConstraint.activate([
-            textView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
-            textView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            textView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            textView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -100)
+            clearButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            clearButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            clearButton.heightAnchor.constraint(equalToConstant: 30),
+
+            textView.topAnchor.constraint(equalTo: clearButton.bottomAnchor, constant: 8),
+            textView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
+            textView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
+            textView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
     }
 
-    private func setupButton() {
-        runButton.setTitle("Start Injection", for: .normal)
-        runButton.setTitleColor(.white, for: .normal)
-        runButton.backgroundColor = .systemPurple
-        runButton.layer.cornerRadius = 8
-        runButton.addTarget(self, action: #selector(startInjection), for: .touchUpInside)
-        view.addSubview(runButton)
-        runButton.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            runButton.topAnchor.constraint(equalTo: textView.bottomAnchor, constant: 16),
-            runButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            runButton.widthAnchor.constraint(equalToConstant: 200),
-            runButton.heightAnchor.constraint(equalToConstant: 44)
-        ])
+    @objc private func clearLog() {
+        textView.text = ""
     }
 
-    @objc private func startInjection() {
-        append("📦 Step 1: Selecting IPA...")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            self.append("🔍 Step 2: Analyzing @rpath...")
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            self.append("🧬 Step 3: Injecting dylib...")
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            self.append("📦 Step 4: Rebuilding IPA...")
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
-            self.append("✅ Done! Injected IPA saved to Files.")
+    public func log(_ message: String) {
+        DispatchQueue.main.async {
+            let timestamp = self.getCurrentTimestamp()
+            let fullMessage = "[\(timestamp)] \(message)\n"
+            self.textView.text += fullMessage
+            let range = NSMakeRange(self.textView.text.count - 1, 0)
+            self.textView.scrollRangeToVisible(range)
         }
     }
 
-    private func append(_ text: String) {
-        textView.text += "\n" + text
-        textView.scrollRangeToVisible(NSMakeRange(textView.text.count, 0))
+    private func getCurrentTimestamp() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        return formatter.string(from: Date())
     }
 }
